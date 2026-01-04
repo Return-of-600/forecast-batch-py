@@ -1,4 +1,3 @@
-# src/main.py
 from pathlib import Path
 from dotenv import load_dotenv
 import time
@@ -19,7 +18,7 @@ def run():
     api = KiwoomAPI(RedisTokenStore())
     rows = api.collect_today_snapshot(
         markets=("0", "10"),
-        qry_dt="20260102",      # None이면 오늘
+        qry_dt=None,      # None이면 오늘
         indc_tp="0",
         per_code_sleep=0.12,
     )
