@@ -58,7 +58,8 @@ class PostgresWriter:
             volume = EXCLUDED.volume,
             market_cap = EXCLUDED.market_cap,
             listed_shares = EXCLUDED.listed_shares,
-            name = EXCLUDED.name
+            name = EXCLUDED.name,
+            updated_at = NOW()
         ;
         """
 
