@@ -8,7 +8,7 @@ class RedisTokenStore:
         self.r = redis.Redis(
             host=os.getenv("REDIS_HOST", "127.0.0.1"),
             port=int(os.getenv("REDIS_PORT", "6379")),
-            username=os.getenv("REDIS_USER"),   # ACL 쓸 경우
+            username=os.getenv("REDIS_USER"),
             password=os.getenv("REDIS_PW"),
             decode_responses=True,
         )

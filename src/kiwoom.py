@@ -1,4 +1,3 @@
-# src/kiwoom.py
 import os
 import re
 import time
@@ -12,9 +11,9 @@ from token_store import RedisTokenStore
 KST = timezone(timedelta(hours=9))
 
 # ====== 키움 엔드포인트 ======
-ENDPOINT_TOKEN = "/oauth2/token"         # au10001
-ENDPOINT_REVOKE = "/oauth2/revoke"       # au10002
-ENDPOINT_CHART = "/api/dostk/chart"      # ka10081 (백업용)
+ENDPOINT_TOKEN = "/oauth2/token"  # au10001
+ENDPOINT_REVOKE = "/oauth2/revoke"  # au10002
+ENDPOINT_CHART = "/api/dostk/chart"  # ka10081
 ENDPOINT_STKINFO = "/api/dostk/stkinfo"  # ka10001, ka10099
 ENDPOINT_MRKCOND = "/api/dostk/mrkcond"  # ka10086
 
@@ -47,9 +46,6 @@ def _normalize_int(x: Any) -> int:
     return int(float(s))
 
 
-# =========================
-# 종목 필터 (insert.py에서 이식)
-# =========================
 ETF_BRANDS = [
     "TIGER", "KODEX", "KOSEF", "KBSTAR", "ARIRANG", "HANARO", "SOL",
     "ACE", "TIMEFOLIO", "TREX", "KINDEX", "RISE", "FOCUS", "PLUS",
@@ -127,9 +123,6 @@ class KiwoomAPI:
             raise RuntimeError("KIWOOM_HOST is not set. Check .env loading.")
         self.token_store = token_store
 
-    # -------------------------
-    # 1) 토큰
-    # -------------------------
     def fn_au10001(self, data: Dict[str, Any]) -> dict:
         """접근토큰 발급 + Redis 저장"""
         url = self.host + ENDPOINT_TOKEN
@@ -149,8 +142,6 @@ class KiwoomAPI:
         ttl = ttl_from_expires_dt(expires_dt)
         self.token_store.set_token(token=token, ttl_seconds=ttl, token_type=token_type)
 
-        # 민감정보(토큰) 출력 금지
-        print(f"[KIWOOM] token saved to redis ttl={ttl} expires_dt={expires_dt}")
         return body
 
     def fn_au10002(self, data: Dict[str, Any]) -> dict:
@@ -183,16 +174,13 @@ class KiwoomAPI:
             raise RuntimeError("Token issuance succeeded but token not found in Redis.")
         return cached["token"]
 
-    # -------------------------
-    # 2) 공통 요청 (POST + retry)
-    # -------------------------
     def _post_tr(
-        self,
-        api_id: str,
-        endpoint: str,
-        payload: Dict[str, Any],
-        cont_yn: str = "N",
-        next_key: str = "",
+            self,
+            api_id: str,
+            endpoint: str,
+            payload: Dict[str, Any],
+            cont_yn: str = "N",
+            next_key: str = "",
     ) -> Tuple[Dict[str, Any], Dict[str, str]]:
         token = self.get_access_token()
 
@@ -232,7 +220,7 @@ class KiwoomAPI:
         raise RuntimeError(f"[{api_id}] retry exhausted")
 
     # -------------------------
-    # 3) ka10099: 종목 리스트 조회 + 필터 적용
+    # ka10099: 종목 리스트 조회 + 필터 적용
     # -------------------------
     def fn_ka10099_stock_list(self, markets: Tuple[str, ...] = ("0", "10")) -> List[Dict[str, Any]]:
         """
@@ -255,13 +243,13 @@ class KiwoomAPI:
         return filter_stock_list(all_items)
 
     # -------------------------
-    # 4) ka10086: 일별 주가(날짜 기준 1건)  ✅ 배치 기본
+    # ka10086: 일별 주가(날짜 기준 1건)
     # -------------------------
     def fn_ka10086_daily(
-        self,
-        stk_cd: str,
-        qry_dt: str,
-        indc_tp: str = "0",  # 0: 수량, 1: 금액(백만)
+            self,
+            stk_cd: str,
+            qry_dt: str,
+            indc_tp: str = "0",  # 0: 수량, 1: 금액(백만)
     ) -> Optional[Dict[str, Any]]:
         """
         ka10086: 일별주가요청
@@ -284,7 +272,7 @@ class KiwoomAPI:
         return rows[0]
 
     # -------------------------
-    # 5) ka10081: 종목별 최신 1건(백업용)
+    # ka10081: 종목별 최신 1건
     # -------------------------
     def fn_ka10081_latest(self, stk_cd: str, base_dt: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
@@ -306,7 +294,7 @@ class KiwoomAPI:
         return rows[0]
 
     # -------------------------
-    # 6) ka10001: 기본정보(상장주식수/시총)
+    # ka10001: 기본정보(상장주식수/시총)
     # -------------------------
     def fn_ka10001_basic(self, stk_cd: str) -> dict:
         """
@@ -330,14 +318,14 @@ class KiwoomAPI:
         }
 
     # -------------------------
-    # 7) 배치 스냅샷 생성(저장X) ✅ ka10086 기반
+    # 배치 스냅샷 생성
     # -------------------------
     def collect_today_snapshot(
-        self,
-        markets: Tuple[str, ...] = ("0", "10"),
-        qry_dt: Optional[str] = None,
-        indc_tp: str = "0",
-        per_code_sleep: float = 0.12,
+            self,
+            markets: Tuple[str, ...] = ("0", "10"),
+            qry_dt: Optional[str] = None,
+            indc_tp: str = "0",
+            per_code_sleep: float = 0.12,
     ) -> List[Dict[str, Any]]:
         """
         최종 산출:
@@ -375,7 +363,7 @@ class KiwoomAPI:
                     "dt": qry_dt,  # YYYYMMDD (DB에서 date로 변환)
                     "open": abs(_normalize_int(daily.get("open_pric"))),
                     "high": abs(_normalize_int(daily.get("high_pric"))),
-                    "low":abs(_normalize_int(daily.get("low_pric"))),
+                    "low": abs(_normalize_int(daily.get("low_pric"))),
                     "close": abs(_normalize_int(daily.get("close_pric"))),
                     "volume": abs(_normalize_int(daily.get("trde_qty"))),
                     "listed_shares": int(basic["listed_shares"]),
@@ -393,20 +381,3 @@ class KiwoomAPI:
             time.sleep(per_code_sleep)
 
         return out
-
-
-if __name__ == "__main__":
-    # 로컬 단독 테스트용(운영 배치에서는 main.py에서 import 해서 호출)
-    store = RedisTokenStore()
-    api = KiwoomAPI(token_store=store)
-
-    rows = api.collect_today_snapshot(
-        markets=("0", "10"),
-        qry_dt=None,       # None이면 오늘
-        indc_tp="0",
-        per_code_sleep=0.12,
-    )
-
-    print(f"snapshot rows={len(rows)}")
-    if rows:
-        print("sample:", {k: rows[0][k] for k in ["code", "dt", "close", "market_cap", "listed_shares", "name"]})
